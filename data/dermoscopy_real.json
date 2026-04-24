@@ -102,5 +102,41 @@
   {
     "id": "case_026",
     "src": "images/dermoscopy/real/026.jpg"
+  },
+    {
+    "id": "case_027",
+    "src": "images/dermoscopy/real/027.jpg"
+  },
+    {
+    "id": "case_028",
+    "src": "images/dermoscopy/real/028.jpg"
+  },
+    {
+    "id": "case_029",
+    "src": "images/dermoscopy/real/029.jpg"
+  },
+    {
+    "id": "case_030",
+    "src": "images/dermoscopy/real/030.jpg"
+  },
+    {
+    "id": "case_031",
+    "src": "images/dermoscopy/real/031.jpg"
+  },
+    {
+    "id": "case_032",
+    "src": "images/dermoscopy/real/032.jpg"
+  },
+    {
+    "id": "case_033",
+    "src": "images/dermoscopy/real/033.jpg"
+  },
+    {
+    "id": "case_034",
+    "src": "images/dermoscopy/real/034.jpg"
+  },
+    {
+    "id": "case_035",
+    "src": "images/dermoscopy/real/035.jpg"
   }
 ]
