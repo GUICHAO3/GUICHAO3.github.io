@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>医学图像 AI 判别小 Demo</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #65708a;
+      --line: #e6e9f2;
+      --primary: #2f6fed;
+      --primary-dark: #2559bd;
+      --danger: #d93025;
+      --success: #188038;
+      --shadow: 0 18px 45px rgba(24, 35, 66, 0.08);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(47,111,237,0.16), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(24,128,56,0.10), transparent 28%),
+        var(--bg);
+    }
+
+    .app {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 60px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+
+    .title h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 46px);
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+    }
+
+    .title p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 760px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: rgba(255,255,255,0.75);
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(230,233,242,0.9);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      background: #fbfcff;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 26px;
+      margin-bottom: 4px;
+      letter-spacing: -0.03em;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 20px;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .option {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 18px;
+      padding: 18px;
+      cursor: pointer;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+      min-height: 124px;
+    }
+
+    .option:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(24, 35, 66, 0.08);
+      border-color: rgba(47,111,237,.45);
+    }
+
+    .option:disabled {
+      opacity: .52;
+      cursor: not-allowed;
+      background: #f5f6fa;
+    }
+
+    .option b {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .option small {
+      display: block;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 13px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: min(100%, 420px);
+      color: var(--muted);
+    }
+
+    .progress {
+      flex: 1;
+      height: 10px;
+      border-radius: 999px;
+      background: #eef1f7;
+      overflow: hidden;
+    }
+
+    .bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary), #52a2ff);
+      border-radius: inherit;
+      transition: width .25s ease;
+    }
+
+    .image-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .image-wrap {
+      border: 1px solid var(--line);
+      background: #0f172a;
+      border-radius: 18px;
+      min-height: 460px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .image-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      max-height: 72vh;
+    }
+
+    .question-panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      background: #fbfcff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .question-panel h2 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+      line-height: 1.25;
+    }
+
+    .meta {
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .answer-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    button.primary,
+    button.secondary,
+    button.ghost {
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .16s ease, background .16s ease, opacity .16s ease;
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    button.primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+    button.secondary {
+      background: #eaf1ff;
+      color: var(--primary-dark);
+    }
+
+    button.secondary:hover { transform: translateY(-1px); }
+
+    button.ghost {
+      background: #f1f3f8;
+      color: var(--text);
+    }
+
+    button:disabled { cursor: not-allowed; opacity: .6; transform: none !important; }
+
+    .feedback {
+      min-height: 24px;
+      font-weight: 700;
+    }
+
+    .feedback.ok { color: var(--success); }
+    .feedback.no { color: var(--danger); }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .notice {
+      padding: 13px 14px;
+      border-radius: 14px;
+      border: 1px solid #ffd7a8;
+      background: #fff8ed;
+      color: #7a4b00;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .hidden { display: none !important; }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin-top: 12px;
+    }
+
+    code {
+      background: #f1f3f8;
+      border: 1px solid var(--line);
+      padding: 2px 6px;
+      border-radius: 7px;
+    }
+
+    @media (max-width: 860px) {
+      header { flex-direction: column; }
+      .stats, .options, .result-grid { grid-template-columns: 1fr; }
+      .image-card { grid-template-columns: 1fr; }
+      .image-wrap { min-height: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="title">
+        <h1>医学图像 AI 判别小 Demo</h1>
+        <p>请选择任务和数据集。每轮随机抽取 15 张图像，回答 Yes / No 后自动进入下一张，结束后显示本轮正确率，并把结果保存到可下载文件；配置 Firebase 后还会实时更新总体判断概率。</p>
+      </div>
+      <div class="pill" id="storageStatus">统计：检查中…</div>
+    </header>
+
+    <section class="card" id="homeView">
+      <h2 class="section-title">总体统计</h2>
+      <div class="stats">
+        <div class="stat"><strong id="overallAccuracy">--</strong><span>所有人的总体正确率</span></div>
+        <div class="stat"><strong id="overallTrials">--</strong><span>已完成轮数</span></div>
+        <div class="stat"><strong id="overallAnswers">--</strong><span>总判断次数</span></div>
+        <div class="stat"><strong id="overallCorrect">--</strong><span>总正确次数</span></div>
+      </div>
+
+      <div style="height: 22px"></div>
+      <h2 class="section-title">1. 选择功能</h2>
+      <div class="options" id="modeOptions">
+        <button class="option" data-mode="generated">
+          <b>判断是否为 AI 生成医学图像</b>
+          <small>Yes = 这张图像是 AI 生成；No = 这张图像是真实医学图像。</small>
+        </button>
+        <button class="option" data-mode="edited">
+          <b>判断医学图像是否被 AI 编辑过</b>
+          <small>Yes = 这张图像被 AI 编辑过；No = 这张图像是真实未编辑医学图像。</small>
+        </button>
+        <button class="option" disabled>
+          <b>未完待续</b>
+          <small>此功能暂未开放。</small>
+        </button>
+      </div>
+
+      <div id="datasetBlock" class="hidden" style="margin-top: 22px;">
+        <h2 class="section-title">2. 选择数据集</h2>
+        <div class="options" id="datasetOptions">
+          <button class="option" data-dataset="dermoscopy">
+            <b>毛发镜图像</b>
+            <small>从毛发镜真实、AI生成或AI编辑数据文件中抽取。</small>
+          </button>
+          <button class="option" data-dataset="fundus">
+            <b>眼底图像</b>
+            <small>从眼底真实、AI生成或AI编辑数据文件中抽取。</small>
+          </button>
+          <button class="option" disabled>
+            <b>未完待续</b>
+            <small>后续可继续添加 CT、MRI、X-ray 等数据集。</small>
+          </button>
+        </div>
+      </div>
+
+      <p class="footer-note">数据清单默认放在 <code>data/</code> 目录。你只需要把每个 JSON 文件里的图片路径替换成自己的数据即可。</p>
+    </section>
+
+    <section class="card hidden" id="quizView">
+      <div class="toolbar">
+        <div>
+          <b id="quizTitle">判别任务</b>
+          <div class="meta" id="quizSubtitle"></div>
+        </div>
+        <div class="progress-wrap">
+          <span id="progressText">1 / 15</span>
+          <div class="progress"><div class="bar" id="progressBar"></div></div>
+        </div>
+      </div>
+
+      <div class="image-card">
+        <div class="image-wrap">
+          <img id="quizImage" alt="待判断医学图像" />
+        </div>
+        <aside class="question-panel">
+          <div>
+            <h2 id="questionText">这张图像是 AI 生成的吗？</h2>
+            <p class="meta">请选择你的判断。无论回答正确或错误，系统都会自动进入下一张。</p>
+          </div>
+          <div>
+            <div class="answer-buttons">
+              <button class="primary" id="yesBtn">Yes</button>
+              <button class="secondary" id="noBtn">No</button>
+            </div>
+            <p class="feedback" id="feedback"></p>
+            <button class="ghost" id="quitBtn" style="width:100%; margin-top: 8px;">退出本轮</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="card hidden" id="resultView">
+      <h2 class="section-title">本轮结果</h2>
+      <div class="result-grid">
+        <div class="stat"><strong id="resultAccuracy">--</strong><span>本轮正确率</span></div>
+        <div class="stat"><strong id="resultCorrect">--</strong><span>正确题数</span></div>
+        <div class="stat"><strong id="resultTotal">15</strong><span>总题数</span></div>
+      </div>
+      <div class="notice" id="saveNotice">结果文件已在浏览器中生成，可点击下方按钮下载保存。</div>
+      <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 16px;">
+        <button class="primary" id="downloadJsonBtn">下载 JSON 结果</button>
+        <button class="secondary" id="downloadCsvBtn">下载 CSV 结果</button>
+        <button class="ghost" id="backHomeBtn">回到初始界面</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import {
+      getFirestore,
+      doc,
+      collection,
+      addDoc,
+      runTransaction,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    /***********************
+     * 1. Firebase 配置区
+     *
+     * 如果只想本地预览，可以先保持为空。
+     * 如果要让所有人的总体概率实时更新，请在 Firebase 控制台创建 Web App，
+     * 然后把 firebaseConfig 替换为你的配置对象。
+     ***********************/
+    const firebaseConfig = {
+      // apiKey: "YOUR_API_KEY",
+      // authDomain: "YOUR_PROJECT.firebaseapp.com",
+      // projectId: "YOUR_PROJECT_ID",
+      // storageBucket: "YOUR_PROJECT.appspot.com",
+      // messagingSenderId: "YOUR_SENDER_ID",
+      // appId: "YOUR_APP_ID"
+    };
+
+    /***********************
+     * 2. 数据集配置区
+     *
+     * 每个医学数据集需要 3 个 JSON 文件：
+     * - real: 真实图像
+     * - generated: AI 生成图像
+     * - edited: AI 编辑图像
+     *
+     * JSON 文件格式可以是：
+     * ["images/a.jpg", "images/b.jpg"]
+     * 或：
+     * [{"id":"case001", "src":"images/a.jpg"}, {"id":"case002", "src":"images/b.jpg"}]
+     ***********************/
+    const DATASETS = {
+      dermoscopy: {
+        label: "毛发镜图像",
+        files: {
+          real: "data/dermoscopy_real.json",
+          generated: "data/dermoscopy_ai_generated.json",
+          edited: "data/dermoscopy_ai_edited.json"
+        }
+      },
+      fundus: {
+        label: "眼底图像",
+        files: {
+          real: "data/fundus_real.json",
+          generated: "data/fundus_ai_generated.json",
+          edited: "data/fundus_ai_edited.json"
+        }
+      }
+    };
+
+    const TOTAL_PER_ROUND = 15;
+    const MODE_INFO = {
+      generated: {
+        label: "判断是否为 AI 生成医学图像",
+        positiveKey: "generated",
+        positiveLabel: "AI生成",
+        question: "这张图像是 AI 生成的医学图像吗？"
+      },
+      edited: {
+        label: "判断医学图像是否被 AI 编辑过",
+        positiveKey: "edited",
+        positiveLabel: "AI编辑",
+        question: "这张医学图像被 AI 编辑过吗？"
+      }
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      selectedMode: null,
+      selectedDataset: null,
+      questions: [],
+      currentIndex: 0,
+      answers: [],
+      resultPayload: null,
+      db: null,
+      firebaseEnabled: false
+    };
+
+    initFirebase();
+    bindEvents();
+
+    function bindEvents() {
+      document.querySelectorAll("#modeOptions .option[data-mode]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.selectedMode = btn.dataset.mode;
+          $("datasetBlock").classList.remove("hidden");
+          document.querySelectorAll("#modeOptions .option[data-mode]").forEach(b => b.style.borderColor = "var(--line)");
+          btn.style.borderColor = "rgba(47,111,237,.85)";
+        });
+      });
+
+      document.querySelectorAll("#datasetOptions .option[data-dataset]").forEach(btn => {
+        btn.addEventListener("click", () => startQuiz(btn.dataset.dataset));
+      });
+
+      $("yesBtn").addEventListener("click", () => answer(true));
+      $("noBtn").addEventListener("click", () => answer(false));
+      $("quitBtn").addEventListener("click", resetToHome);
+      $("backHomeBtn").addEventListener("click", resetToHome);
+      $("downloadJsonBtn").addEventListener("click", downloadResultJson);
+      $("downloadCsvBtn").addEventListener("click", downloadResultCsv);
+    }
+
+    function initFirebase() {
+      const hasFirebaseConfig = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
+      if (!hasFirebaseConfig) {
+        state.firebaseEnabled = false;
+        $("storageStatus").textContent = "统计：本地预览模式";
+        renderLocalOverallStats();
+        return;
+      }
+
+      try {
+        const app = initializeApp(firebaseConfig);
+        state.db = getFirestore(app);
+        state.firebaseEnabled = true;
+        $("storageStatus").textContent = "统计：Firebase 已连接";
+        listenOverallStats();
+      } catch (err) {
+        console.error(err);
+        state.firebaseEnabled = false;
+        $("storageStatus").textContent = "统计：Firebase 连接失败，使用本地模式";
+        renderLocalOverallStats();
+      }
+    }
+
+    function listenOverallStats() {
+      const ref = doc(state.db, "medical_ai_demo_stats", "overall");
+      onSnapshot(ref, snap => {
+        if (!snap.exists()) {
+          renderStats({ totalTrials: 0, totalAnswers: 0, totalCorrect: 0 });
+          return;
+        }
+        renderStats(snap.data());
+      }, err => {
+        console.error(err);
+        $("storageStatus").textContent = "统计：Firebase 读取失败，使用本地模式";
+        state.firebaseEnabled = false;
+        renderLocalOverallStats();
+      });
+    }
+
+    function renderLocalOverallStats() {
+      const local = JSON.parse(localStorage.getItem("medical_ai_demo_local_stats") || "{}");
+      renderStats({
+        totalTrials: local.totalTrials || 0,
+        totalAnswers: local.totalAnswers || 0,
+        totalCorrect: local.totalCorrect || 0
+      });
+    }
+
+    function renderStats(stats) {
+      const totalTrials = Number(stats.totalTrials || 0);
+      const totalAnswers = Number(stats.totalAnswers || 0);
+      const totalCorrect = Number(stats.totalCorrect || 0);
+      const accuracy = totalAnswers > 0 ? `${Math.round((totalCorrect / totalAnswers) * 1000) / 10}%` : "--";
+
+      $("overallAccuracy").textContent = accuracy;
+      $("overallTrials").textContent = String(totalTrials);
+      $("overallAnswers").textContent = String(totalAnswers);
+      $("overallCorrect").textContent = String(totalCorrect);
+    }
+
+    async function startQuiz(datasetKey) {
+      if (!state.selectedMode) {
+        alert("请先选择功能。");
+        return;
+      }
+
+      state.selectedDataset = datasetKey;
+      setBusy(true);
+      try {
+        state.questions = await buildQuestions(state.selectedMode, datasetKey);
+        state.currentIndex = 0;
+        state.answers = [];
+        showView("quizView");
+        renderCurrentQuestion();
+      } catch (err) {
+        console.error(err);
+        alert(err.message || "加载数据失败，请检查 data/ 下的 JSON 文件和图片路径。");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function buildQuestions(modeKey, datasetKey) {
+      const mode = MODE_INFO[modeKey];
+      const dataset = DATASETS[datasetKey];
+      const real = await loadManifest(dataset.files.real, "real");
+      const positive = await loadManifest(dataset.files[mode.positiveKey], mode.positiveKey);
+
+      if (positive.length < 1) {
+        throw new Error(`${dataset.label} 的 ${mode.positiveLabel} 数据至少需要 1 张图像。`);
+      }
+      if (positive.length + real.length < TOTAL_PER_ROUND) {
+        throw new Error(`${dataset.label} 当前可用图像不足 ${TOTAL_PER_ROUND} 张。请补充真实图像和 ${mode.positiveLabel} 图像。`);
+      }
+
+      const questions = sampleRound(positive, real, TOTAL_PER_ROUND).map(item => ({
+        ...item,
+        mode: modeKey,
+        dataset: datasetKey,
+        questionText: mode.question
+      }));
+
+      return shuffle(questions);
+    }
+
+    async function loadManifest(url, sourceType) {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`无法加载数据文件：${url}`);
+      }
+      const data = await res.json();
+      if (!Array.isArray(data)) {
+        throw new Error(`${url} 必须是数组格式。`);
+      }
+
+      return data.map((item, index) => {
+        const src = typeof item === "string" ? item : item.src;
+        if (!src) throw new Error(`${url} 第 ${index + 1} 项缺少 src。`);
+        return {
+          id: typeof item === "string" ? `${sourceType}_${index + 1}` : (item.id || `${sourceType}_${index + 1}`),
+          src,
+          sourceType,
+          isPositive: sourceType !== "real"
+        };
+      });
+    }
+
+    function sampleRound(positive, negative, total) {
+      const posPool = shuffle([...positive]);
+      const negPool = shuffle([...negative]);
+
+      let posCount = randomInt(1, Math.min(posPool.length, total));
+      if (negative.length > 0) {
+        const balancedTarget = randomInt(Math.max(1, Math.floor(total * 0.35)), Math.min(total - 1, Math.ceil(total * 0.65), posPool.length));
+        posCount = balancedTarget;
+      }
+
+      let negCount = total - posCount;
+
+      if (negCount > negPool.length) {
+        negCount = negPool.length;
+        posCount = total - negCount;
+      }
+      if (posCount > posPool.length) {
+        posCount = posPool.length;
+        negCount = total - posCount;
+      }
+
+      if (posCount < 1 || posCount + negCount < total) {
+        throw new Error(`可抽取图像不足 ${total} 张，请检查数据文件。`);
+      }
+
+      return [...posPool.slice(0, posCount), ...negPool.slice(0, negCount)];
+    }
+
+    function renderCurrentQuestion() {
+      const q = state.questions[state.currentIndex];
+      const mode = MODE_INFO[state.selectedMode];
+      const dataset = DATASETS[state.selectedDataset];
+      const progress = ((state.currentIndex) / TOTAL_PER_ROUND) * 100;
+
+      $("quizTitle").textContent = mode.label;
+      $("quizSubtitle").textContent = `数据集：${dataset.label}`;
+      $("progressText").textContent = `${state.currentIndex + 1} / ${TOTAL_PER_ROUND}`;
+      $("progressBar").style.width = `${progress}%`;
+      $("quizImage").src = q.src;
+      $("questionText").textContent = q.questionText;
+      $("feedback").textContent = "";
+      $("feedback").className = "feedback";
+      $("yesBtn").disabled = false;
+      $("noBtn").disabled = false;
+    }
+
+    function answer(userAnswerYes) {
+      const q = state.questions[state.currentIndex];
+      const correct = userAnswerYes === q.isPositive;
+      state.answers.push({
+        index: state.currentIndex + 1,
+        imageId: q.id,
+        imageSrc: q.src,
+        groundTruth: q.isPositive ? "Yes" : "No",
+        userAnswer: userAnswerYes ? "Yes" : "No",
+        correct,
+        sourceType: q.sourceType
+      });
+
+      $("yesBtn").disabled = true;
+      $("noBtn").disabled = true;
+      $("feedback").textContent = correct ? "回答正确" : `回答错误，正确答案是 ${q.isPositive ? "Yes" : "No"}`;
+      $("feedback").className = `feedback ${correct ? "ok" : "no"}`;
+      $("progressBar").style.width = `${((state.currentIndex + 1) / TOTAL_PER_ROUND) * 100}%`;
+
+      window.setTimeout(() => {
+        state.currentIndex += 1;
+        if (state.currentIndex >= TOTAL_PER_ROUND) {
+          finishQuiz();
+        } else {
+          renderCurrentQuestion();
+        }
+      }, 520);
+    }
+
+    async function finishQuiz() {
+      const correctCount = state.answers.filter(a => a.correct).length;
+      const accuracy = correctCount / TOTAL_PER_ROUND;
+      const payload = {
+        app: "medical-ai-image-judgement-demo",
+        mode: state.selectedMode,
+        modeLabel: MODE_INFO[state.selectedMode].label,
+        dataset: state.selectedDataset,
+        datasetLabel: DATASETS[state.selectedDataset].label,
+        total: TOTAL_PER_ROUND,
+        correct: correctCount,
+        accuracy,
+        createdAtLocal: new Date().toISOString(),
+        answers: state.answers
+      };
+      state.resultPayload = payload;
+
+      $("resultAccuracy").textContent = `${Math.round(accuracy * 1000) / 10}%`;
+      $("resultCorrect").textContent = `${correctCount} / ${TOTAL_PER_ROUND}`;
+      $("resultTotal").textContent = String(TOTAL_PER_ROUND);
+      showView("resultView");
+
+      try {
+        await saveResult(payload);
+        $("saveNotice").textContent = state.firebaseEnabled
+          ? "本轮结果已保存到 Firebase，并已更新初始界面的总体判断概率；你也可以下载本轮结果文件。"
+          : "本轮结果已保存到当前浏览器的本地统计；你也可以下载本轮结果文件。";
+      } catch (err) {
+        console.error(err);
+        $("saveNotice").textContent = "云端保存失败，但本轮结果仍可下载保存。请检查 Firebase 配置或数据库规则。";
+      }
+    }
+
+    async function saveResult(payload) {
+      if (!state.firebaseEnabled) {
+        saveLocalStats(payload);
+        return;
+      }
+
+      await addDoc(collection(state.db, "medical_ai_demo_results"), {
+        ...payload,
+        createdAt: serverTimestamp()
+      });
+
+      const overallRef = doc(state.db, "medical_ai_demo_stats", "overall");
+      await runTransaction(state.db, async (transaction) => {
+        const snap = await transaction.get(overallRef);
+        const prev = snap.exists() ? snap.data() : {};
+        const totalTrials = Number(prev.totalTrials || 0) + 1;
+        const totalAnswers = Number(prev.totalAnswers || 0) + payload.total;
+        const totalCorrect = Number(prev.totalCorrect || 0) + payload.correct;
+        transaction.set(overallRef, {
+          totalTrials,
+          totalAnswers,
+          totalCorrect,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      });
+    }
+
+    function saveLocalStats(payload) {
+      const prev = JSON.parse(localStorage.getItem("medical_ai_demo_local_stats") || "{}");
+      const next = {
+        totalTrials: Number(prev.totalTrials || 0) + 1,
+        totalAnswers: Number(prev.totalAnswers || 0) + payload.total,
+        totalCorrect: Number(prev.totalCorrect || 0) + payload.correct
+      };
+      localStorage.setItem("medical_ai_demo_local_stats", JSON.stringify(next));
+      renderStats(next);
+    }
+
+    function downloadResultJson() {
+      if (!state.resultPayload) return;
+      const blob = new Blob([JSON.stringify(state.resultPayload, null, 2)], { type: "application/json;charset=utf-8" });
+      downloadBlob(blob, makeFilename("json"));
+    }
+
+    function downloadResultCsv() {
+      if (!state.resultPayload) return;
+      const rows = [
+        ["index", "imageId", "imageSrc", "groundTruth", "userAnswer", "correct", "sourceType"],
+        ...state.resultPayload.answers.map(a => [a.index, a.imageId, a.imageSrc, a.groundTruth, a.userAnswer, a.correct, a.sourceType])
+      ];
+      const csv = rows.map(row => row.map(csvEscape).join(",")).join("\n");
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+      downloadBlob(blob, makeFilename("csv"));
+    }
+
+    function makeFilename(ext) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      return `medical-ai-demo-${state.selectedMode}-${state.selectedDataset}-${stamp}.${ext}`;
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function csvEscape(value) {
+      const text = String(value ?? "");
+      if (/[",\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
+      return text;
+    }
+
+    function showView(viewId) {
+      ["homeView", "quizView", "resultView"].forEach(id => $(id).classList.add("hidden"));
+      $(viewId).classList.remove("hidden");
+      if (viewId === "homeView" && !state.firebaseEnabled) renderLocalOverallStats();
+    }
+
+    function resetToHome() {
+      state.selectedMode = null;
+      state.selectedDataset = null;
+      state.questions = [];
+      state.currentIndex = 0;
+      state.answers = [];
+      state.resultPayload = null;
+      $("datasetBlock").classList.add("hidden");
+      document.querySelectorAll("#modeOptions .option[data-mode]").forEach(b => b.style.borderColor = "var(--line)");
+      showView("homeView");
+    }
+
+    function setBusy(isBusy) {
+      document.querySelectorAll("button").forEach(btn => {
+        if (!btn.disabled || btn.id === "yesBtn" || btn.id === "noBtn") btn.dataset.prevDisabled = btn.disabled ? "1" : "0";
+      });
+      if (isBusy) {
+        document.querySelectorAll("button").forEach(btn => btn.disabled = true);
+        $("storageStatus").textContent = "正在加载图像清单…";
+      } else {
+        document.querySelectorAll("button").forEach(btn => {
+          if (btn.dataset.prevDisabled === "0") btn.disabled = false;
+        });
+        document.querySelectorAll("button.option[disabled]").forEach(btn => btn.disabled = true);
+        $("storageStatus").textContent = state.firebaseEnabled ? "统计：Firebase 已连接" : "统计：本地预览模式";
+      }
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+  </script>
+</body>
+</html>
